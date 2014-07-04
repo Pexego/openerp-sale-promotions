@@ -108,6 +108,8 @@ class PromotionsRules(orm.Model):
                             ('state', '<>', 'cancel')
                             ], context=context)
                 res[promotion_rule.id] = len(matching_ids)
+            else:
+                res[promotion_rule.id] = 0
         return res
 
     _columns = {
@@ -124,7 +126,7 @@ class PromotionsRules(orm.Model):
                   string="Partner Categories",
                   help="Applicable to all if none is selected"
                                               ),
-        'coupon_code':fields.char('Coupon Code', size=20, required=True),
+        'coupon_code':fields.char('Coupon Code', size=20, required=False),
         'uses_per_coupon':fields.integer('Uses per Coupon'),
         'uses_per_partner':fields.integer('Uses per Partner'),
         'coupon_used': fields.function(
@@ -243,7 +245,6 @@ class PromotionsRules(orm.Model):
         if not context:
             context = {}
         expression_obj = self.pool.get('promos.rules.conditions.exps')
-        import ipdb; ipdb.set_trace()
         try:
             self.check_primary_conditions(
                                            cursor, user,
