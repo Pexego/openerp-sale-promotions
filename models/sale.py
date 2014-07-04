@@ -21,18 +21,18 @@ This design is inspired by magento
 #You should have received a copy of the GNU General Public License      #
 #along with this program.  If not, see <http://www.gnu.org/licenses/>.  #
 #########################################################################
-from osv import osv, fields
+from openerp.osv import orm, fields
 
-class SaleOrder(osv.osv):
+class SaleOrder(orm.Model):
     '''
     Sale Order
     '''
     _inherit = 'sale.order'
-    
+
     _columns = {
         'coupon_code':fields.char('Promo Coupon Code', size=20),
     }
-    
+
     def apply_promotions(self, cursor, user, ids, context=None):
         """
         Applies the promotions to the given records
@@ -43,24 +43,21 @@ class SaleOrder(osv.osv):
         """
         promotions_obj = self.pool.get('promos.rules')
         for order_id in ids:
-            promotions_obj.apply_promotions(cursor, user, 
+            promotions_obj.apply_promotions(cursor, user,
                                             order_id, context=None)
-            
+
         return True
-            
-SaleOrder()
 
 
-class SaleOrderLine(osv.osv):
+class SaleOrderLine(orm.Model):
     '''
     Sale Order Line
     '''
     _inherit = "sale.order.line"
-    
+
     _columns = {
         'promotion_line':fields.boolean(
                 "Promotion Line",
                 help="Indicates if the line was created by promotions"
                                         )
     }
-SaleOrderLine()

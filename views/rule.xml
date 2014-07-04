@@ -11,7 +11,6 @@
                         <field name="name" colspan="2" select="1"/>
                         <field name="sequence" colspan="2" />
                         <field name="active" colspan="2" select="1"/>
-                        <field name="shop" colspan="2" />
                         <field name="stop_further" colspan="2" />
                     </group>
                     <group col="4" colspan="4">
@@ -21,12 +20,12 @@
                             nolabel="1" />
 
                     </group>
-			        <group colspan="6">
+                    <group colspan="6">
                         <group colspan="2">
                             <separator colspan="4"
                                 string="Coupon/Voucher Settings" />
                             <field name="coupon_code" />
-						    <field name="coupon_used" />
+                            <field name="coupon_used" />
                             <field name="uses_per_coupon"
                                 attrs="{'required':[('coupon_code','!=',False)]}" />
                             <field name="uses_per_partner"
@@ -103,7 +102,6 @@
                 <tree string="Promotions">
                     <field name="sequence" />
                     <field name="name" />
-                    <field name="shop" />
                     <field name="active" />
                     <field name="coupon_code" />
                     <field name="from_date" />
@@ -122,19 +120,29 @@
         <menuitem id="promos" action="act_promotion_rules"
             parent="base.menu_sale_config_sales" />
 
-        <record model="ir.ui.view" id="view_promotion_cond_expr_form">
+        <record id="view_promotion_cond_expr_form" model="ir.ui.view">
             <field name="name">promos.rules.conditions.exps.form</field>
             <field name="model">promos.rules.conditions.exps</field>
+            <field name="type">form</field>
             <field name="arch" type="xml">
                 <form string="Expressions">
                     <field name="sequence" />
                     <field name="serialised_expr" />
                 </form>
+            </field>
+        </record>
+
+        <record id="view_promotion_cond_expr_tree" model="ir.ui.view">
+            <field name="name">promos.rules.conditions.exps.tree</field>
+            <field name="model">promos.rules.conditions.exps</field>
+            <field name="type">tree</field>
+            <field name="arch" type="xml">
                 <tree string="Expressions">
                     <field name="sequence" />
                     <field name="serialised_expr" />
                 </tree>
             </field>
         </record>
+
     </data>
 </openerp>

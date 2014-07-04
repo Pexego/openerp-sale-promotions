@@ -29,13 +29,13 @@ try:
 except:
     pass
 
-from osv import osv, fields
-from tools.misc import ustr
-import netsvc
-from tools.translate import _
+from openerp.osv import orm, fields
+from openerp.tools.misc import ustr
+from openerp import netsvc
+from openerp.tools.translate import _
 
-LOGGER = netsvc.Logger()
-DEBUG = True
+# LOGGER = netsvc.Logger()
+DEBUG = False
 PRODUCT_UOM_ID = 1
 
 ATTRIBUTES = [
@@ -76,13 +76,13 @@ ACTION_TYPES = [
     ('prod_x_get_y', _('Buy X get Y free'))
 ]
 
-class PromotionsRules(osv.osv):
+class PromotionsRules(orm.Model):
     "Promotion Rules"
     _name = "promos.rules"
     _description = __doc__
     _order = 'sequence'
-    
-    def count_coupon_use(self, cursor, user, ids, 
+
+    def count_coupon_use(self, cursor, user, ids,
                           name, arg, context=None):
         '''
         This function count the number of sale orders(not in cancelled state)
@@ -109,14 +109,13 @@ class PromotionsRules(osv.osv):
                             ], context=context)
                 res[promotion_rule.id] = len(matching_ids)
         return res
-    
+
     _columns = {
         'name':fields.char('Promo Name', size=50, required=True),
         'description':fields.text('Description'),
         'active':fields.boolean('Active'),
         'stop_further':fields.boolean('Stop Checks',
                               help="Stops further promotions being checked"),
-        'shop':fields.many2one('sale.shop', 'Shop', required=True),
         'partner_categories':fields.many2many(
                   'res.partner.category',
                   'rule_partner_cat_rel',
@@ -129,8 +128,8 @@ class PromotionsRules(osv.osv):
         'uses_per_coupon':fields.integer('Uses per Coupon'),
         'uses_per_partner':fields.integer('Uses per Partner'),
         'coupon_used': fields.function(
-                    count_coupon_use, 
-                    method=True, 
+                    count_coupon_use,
+                    method=True,
                     type='integer',
                     string='Number of Coupon Uses',
                     help='The number of times this coupon has been used.'),
@@ -161,28 +160,28 @@ class PromotionsRules(osv.osv):
         'expected_logic_result':lambda * a:'True',
         'active':lambda * a:'True',
     }
-    
+
     def promotion_date(self, str_date):
         "Converts string date to date"
         import time
         try:
-            return time.strptime(str_date, '%Y-%m-%d %H:%M:%S') 
+            return time.strptime(str_date, '%Y-%m-%d %H:%M:%S')
         except:
             try:
                 return time.strptime(str_date, '%Y-%m-%d')
             except:
                 return str_date
-            
-        
+
+
     def check_primary_conditions(self, cursor, user,
                                   promotion_rule, order, context):
         """
-        Checks the conditions for 
+        Checks the conditions for
             Coupon Code
             Validity Date
         @param cursor: Database Cursor
         @param user: ID of User
-        @param promotion_rule: Browse record sent by calling func. 
+        @param promotion_rule: Browse record sent by calling func.
         @param order: Browse record sent by calling func.
         @param context: Context(no direct use).
         """
@@ -200,12 +199,12 @@ class PromotionsRules(osv.osv):
             if not set(applicable_ids).intersection(partner_categories):
                 raise Exception("Not applicable to Partner Category")
         if promotion_rule.coupon_code:
-            #If the codes don't match then this is not the promo 
+            #If the codes don't match then this is not the promo
             if not order.coupon_code == promotion_rule.coupon_code:
                 raise Exception("Coupon codes do not match")
-            # Calling count_coupon_use to check whether no. of 
+            # Calling count_coupon_use to check whether no. of
             # uses is greater than allowed uses.
-            count = self.count_coupon_use(cursor, user, [promotion_rule.id], 
+            count = self.count_coupon_use(cursor, user, [promotion_rule.id],
                                            True, None, context).values()[0]
             if count > promotion_rule.uses_per_coupon:
                 raise Exception("Coupon is overused")
@@ -231,7 +230,7 @@ class PromotionsRules(osv.osv):
             raise Exception("Order after end of promotion")
         #All tests have succeeded
         return True
-        
+
     def evaluate(self, cursor, user, promotion_rule, order, context=None):
         """
         Evaluates if a promotion is valid
@@ -244,6 +243,7 @@ class PromotionsRules(osv.osv):
         if not context:
             context = {}
         expression_obj = self.pool.get('promos.rules.conditions.exps')
+        import ipdb; ipdb.set_trace()
         try:
             self.check_primary_conditions(
                                            cursor, user,
@@ -275,7 +275,7 @@ class PromotionsRules(osv.osv):
                 if (result == expected_result) and expression.stop_further:
                     return True
             except Exception, e:
-                raise osv.except_osv("Expression Error", e)
+                raise orm.except_orm("Expression Error", e)
             finally:
                 if DEBUG:
                     LOGGER.notifyChannel(
@@ -287,13 +287,13 @@ class PromotionsRules(osv.osv):
                                                )
                         )
         if logic == 'and':
-            #If control comes here for and logic, then all conditions were 
+            #If control comes here for and logic, then all conditions were
             #satisfied
             return True
         else:
             #if control comes here for OR logic, none were satisfied
             return False
-    
+
     def execute_actions(self, cursor, user, promotion_rule,
                             order_id, context):
         """
@@ -321,8 +321,8 @@ class PromotionsRules(osv.osv):
             except Exception, error:
                 raise error
         return True
-        
-        
+
+
     def apply_promotions(self, cursor, user, order_id, context=None):
         """
         Applies promotions
@@ -336,6 +336,7 @@ class PromotionsRules(osv.osv):
         active_promos = self.search(cursor, user,
                                     [('active', '=', True)],
                                     context=context)
+
         for promotion_rule in self.browse(cursor, user,
                                           active_promos, context):
             result = self.evaluate(cursor, user,
@@ -348,7 +349,7 @@ class PromotionsRules(osv.osv):
                                      promotion_rule, order_id,
                                      context)
                 except Exception, e:
-                    raise osv.except_osv(
+                    raise orm.except_orm(
                                          "Promotions",
                                          ustr(e)
                                          )
@@ -356,18 +357,15 @@ class PromotionsRules(osv.osv):
                 if promotion_rule.stop_further:
                     return True
         return True
-            
-
-PromotionsRules()
 
 
-class PromotionsRulesConditionsExprs(osv.osv):
+class PromotionsRulesConditionsExprs(orm.Model):
     "Expressions for conditions"
     _name = 'promos.rules.conditions.exps'
     _description = __doc__
     _order = "sequence"
     _rec_name = 'serialised_expr'
-    
+
     def on_change(self, cursor, user, ids=None,
                    attribute=None, value=None, context=None):
         """
@@ -450,7 +448,7 @@ class PromotionsRulesConditionsExprs(osv.osv):
         'comparator': lambda * a:'==',
         'stop_further': lambda * a: '1'
     }
-    
+
     def validate(self, cursor, user, vals, context=None):
         """
         Checks the validity
@@ -487,7 +485,7 @@ class PromotionsRulesConditionsExprs(osv.osv):
         if attribute == 'product' and \
             not comparator in ITERATOR_COMPARATORS:
             raise Exception(
-                            "Only %s can be used with Product Code" 
+                            "Only %s can be used with Product Code"
                             % ",".join(ITERATOR_COMPARATORS)
                             )
         #Mismatch 3:
@@ -524,7 +522,7 @@ class PromotionsRulesConditionsExprs(osv.osv):
                         "Eg for right format is `['code1,code2',..]|120.50`")
         #After all validations say True
         return True
-        
+
     def serialise(self, attribute, comparator, value):
         """
         Constructs an expression from the entered values
@@ -575,8 +573,8 @@ class PromotionsRulesConditionsExprs(osv.osv):
         return "order.%s %s %s" % (
                                     attribute,
                                     comparator,
-                                    value) 
-        
+                                    value)
+
     def evaluate(self, cursor, user,
                  expression, order, context=None):
         """
@@ -618,9 +616,9 @@ class PromotionsRulesConditionsExprs(osv.osv):
                                                     ) + line.discount
                 prod_weight[product_code] = prod_weight.get(
                                                     product_code, 0.00
-                                                    ) + line.th_weight 
-        return eval(expression.serialised_expr) 
-    
+                                                    ) + line.th_weight
+        return eval(expression.serialised_expr)
+
     def create(self, cursor, user, vals, context=None):
         """
         Serialise before save
@@ -632,13 +630,13 @@ class PromotionsRulesConditionsExprs(osv.osv):
         try:
             self.validate(cursor, user, vals, context)
         except Exception, e:
-            raise osv.except_osv("Invalid Expression", ustr(e))
+            raise orm.except_orm("Invalid Expression", ustr(e))
         vals['serialised_expr'] = self.serialise(vals['attribute'],
                                                  vals['comparator'],
                                                  vals['value'])
         super(PromotionsRulesConditionsExprs, self).create(cursor, user,
                                                            vals, context)
-    
+
     def write(self, cursor, user, ids, vals, context):
         """
         Serialise before Write
@@ -659,19 +657,17 @@ class PromotionsRulesConditionsExprs(osv.osv):
             old_vals.has_key('id') and old_vals.pop('id')
             self.validate(cursor, user, old_vals, context)
         except Exception, e:
-            raise osv.except_osv("Invalid Expression", ustr(e))
+            raise orm.except_orm("Invalid Expression", ustr(e))
         #only value may have changed and client gives only value
-        vals = old_vals 
+        vals = old_vals
         vals['serialised_expr'] = self.serialise(vals['attribute'],
                                                  vals['comparator'],
                                                  vals['value'])
         super(PromotionsRulesConditionsExprs, self).write(cursor, user, ids,
                                                            vals, context)
-        
-PromotionsRulesConditionsExprs()
 
 
-class PromotionsRulesActions(osv.osv):
+class PromotionsRulesActions(orm.Model):
     "Promotions actions"
     _name = 'promos.rules.actions'
     _description = __doc__
@@ -734,7 +730,7 @@ class PromotionsRulesActions(osv.osv):
                     }
         #Finally if nothing works
         return {}
-            
+
     _columns = {
         'sequence':fields.integer('Sequence', required=True),
         'action_type':fields.selection(ACTION_TYPES, 'Action', required=True),
@@ -742,7 +738,7 @@ class PromotionsRulesActions(osv.osv):
         'arguments':fields.char('Arguments', size=100),
         'promotion':fields.many2one('promos.rules', 'Promotion'),
     }
-    
+
     def clear_existing_promotion_lines(self, cursor, user,
                                         order, context=None):
         """
@@ -774,7 +770,7 @@ class PromotionsRulesActions(osv.osv):
                                  {'discount':0.00},
                                  context=context)
         return True
-        
+
     def action_prod_disc_perc(self, cursor, user,
                                action, order, context=None):
         """
@@ -796,7 +792,7 @@ class PromotionsRulesActions(osv.osv):
                                       },
                                      context
                                      )
-    
+
     def action_prod_disc_fix(self, cursor, user,
                               action, order, context=None):
         """
@@ -831,7 +827,7 @@ class PromotionsRulesActions(osv.osv):
                               },
                               context
                               )
-    
+
     def action_cart_disc_perc(self, cursor, user,
                                action, order, context=None):
         """
@@ -856,7 +852,7 @@ class PromotionsRulesActions(osv.osv):
                                   },
                                   context
                                   )
-        
+
     def action_cart_disc_fix(self, cursor, user,
                               action, order, context=None):
         """
@@ -881,7 +877,7 @@ class PromotionsRulesActions(osv.osv):
                                   },
                                   context
                                   )
-    
+
     def create_y_line(self, cursor, user, action,
                        order, quantity, product_id, context=None):
         """
@@ -918,20 +914,20 @@ class PromotionsRulesActions(osv.osv):
         @param action: Action to be taken on sale order
         @param order: sale order
         @param context: Context(no direct use).
-        
-        Note: The function is too long because if it is split then there 
+
+        Note: The function is too long because if it is split then there
                 will a lot of arguments to be passed from one function to
-                another. This might cause the function to get slow and 
+                another. This might cause the function to get slow and
                 hamper the coding standards.
         """
         order_line_obj = self.pool.get('sale.order.line')
         product_obj = self.pool.get('product.product')
-        
+
         vals = prod_qty = {}
         #Get Product
         product_x_code, product_y_code = [eval(code) \
                                 for code in action.product_code.split(",")]
-        product_id = product_obj.search(cursor, user, 
+        product_id = product_obj.search(cursor, user,
                                 [('default_code', '=', product_y_code)],
             context=context)
         if not product_id:
@@ -941,7 +937,7 @@ class PromotionsRulesActions(osv.osv):
         #get Quantity
         qty_x, qty_y = [eval(arg) \
                                 for arg in action.arguments.split(",")]
-        #Build a dictionary of product_code to quantity 
+        #Build a dictionary of product_code to quantity
         for order_line in order.order_line:
             if order_line.product_id:
                 product_code = order_line.product_id.default_code
@@ -971,7 +967,7 @@ class PromotionsRulesActions(osv.osv):
                                             existing_order_line_ids[0],
                                             context)
             #Update that line
-            #The replace is required because on secondary update 
+            #The replace is required because on secondary update
             #the name may be repeated
             if tot_free_y:
                 line_name = "%s (%s)" % (
@@ -988,7 +984,7 @@ class PromotionsRulesActions(osv.osv):
                                           'product_uom_qty': tot_free_y,
                                           'discount': 100,
                                           }, context)
-                        
+
                 else:
                         #If the order has come for 5 and only 3 are free
                         #then convert paid order to 2 units and rest free
@@ -1014,7 +1010,7 @@ class PromotionsRulesActions(osv.osv):
                 return True
             return self.create_y_line(cursor, user, action,
                                        order, tot_free_y, product_id, context)
-                                
+
     def execute(self, cursor, user, action_id,
                                    order, context=None):
         """
@@ -1030,7 +1026,7 @@ class PromotionsRulesActions(osv.osv):
         method_name = 'action_' + action.action_type
         return getattr(self, method_name).__call__(cursor, user, action,
                                                    order, context)
-        
+
     def validate(self, cursor, user, vals, context):
         """
         Validates if the values are coherent with
@@ -1047,25 +1043,25 @@ class PromotionsRulesActions(osv.osv):
             if not type(eval(vals['product_code'])) == str:
                 raise Exception(
                         "Invalid product code\nHas to be 'product_code'"
-                            ) 
+                            )
             if not type(eval(vals['arguments'])) in [int, long, float]:
                 raise Exception("Argument has to be numeric. eg: 10.00")
-        
+
         if vals['action_type'] in [
                            'cart_disc_perc',
                            'cart_disc_fix',
                            ]:
             if vals['product_code']:
-                raise Exception("Product code is not used in cart actions") 
+                raise Exception("Product code is not used in cart actions")
             if not type(eval(vals['arguments'])) in [int, long, float]:
                 raise Exception("Argument has to be numeric. eg: 10.00")
-        
+
         if vals['action_type'] in ['prod_x_get_y', ]:
             try:
                 code_1, code_2 = vals['product_code'].split(",")
                 assert (type(eval(code_1)) == str)
                 assert (type(eval(code_2)) == str)
-            except: 
+            except:
                 raise Exception(
                   "Product codes have to be of form 'product_x','product_y'"
                             )
@@ -1075,9 +1071,9 @@ class PromotionsRulesActions(osv.osv):
                 assert (type(eval(qty_2)) in [int, long])
             except:
                 raise Exception("Argument has to be qty of x,y eg.`1, 1`")
-        
+
         return True
-    
+
     def create(self, cursor, user, vals, context=None):
         """
         Validate before save
@@ -1089,10 +1085,10 @@ class PromotionsRulesActions(osv.osv):
         try:
             self.validate(cursor, user, vals, context)
         except Exception, e:
-            raise osv.except_osv("Invalid Expression", ustr(e))
+            raise orm.except_orm("Invalid Expression", ustr(e))
         super(PromotionsRulesActions, self).create(cursor, user,
                                                            vals, context)
-    
+
     def write(self, cursor, user, ids, vals, context):
         """
         Validate before Write
@@ -1112,10 +1108,8 @@ class PromotionsRulesActions(osv.osv):
             old_vals.has_key('id') and old_vals.pop('id')
             self.validate(cursor, user, old_vals, context)
         except Exception, e:
-            raise osv.except_osv("Invalid Expression", ustr(e))
+            raise orm.except_orm("Invalid Expression", ustr(e))
         #only value may have changed and client gives only value
-        vals = old_vals 
+        vals = old_vals
         super(PromotionsRulesActions, self).write(cursor, user, ids,
                                                            vals, context)
-    
-PromotionsRulesActions()
