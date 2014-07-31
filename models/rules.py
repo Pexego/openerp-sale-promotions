@@ -816,7 +816,7 @@ class PromotionsRulesActions(orm.Model):
         if len(product_id) > 1:
             raise Exception("Many products with same code")
         product = product_obj.browse(cursor, user, product_id[0], context)
-        return order_line_obj.create(cursor,
+        create_id = order_line_obj.create(cursor,
                               user,
                               {
                               'order_id':order.id,
@@ -828,6 +828,7 @@ class PromotionsRulesActions(orm.Model):
                               },
                               context
                               )
+        return order.write({'order_line': [(4, create_id)]})
 
     def action_cart_disc_perc(self, cursor, user,
                                action, order, context=None):
@@ -840,7 +841,7 @@ class PromotionsRulesActions(orm.Model):
         @param context: Context(no direct use).
         """
         order_line_obj = self.pool.get('sale.order.line')
-        return order_line_obj.create(cursor,
+        create_id = order_line_obj.create(cursor,
                                   user,
                                   {
                       'order_id':order.id,
@@ -853,6 +854,7 @@ class PromotionsRulesActions(orm.Model):
                                   },
                                   context
                                   )
+        return order.write({'order_line': [(4, create_id)]})
 
     def action_cart_disc_fix(self, cursor, user,
                               action, order, context=None):
@@ -866,7 +868,7 @@ class PromotionsRulesActions(orm.Model):
         """
         order_line_obj = self.pool.get('sale.order.line')
         if action.action_type == 'cart_disc_fix':
-            return order_line_obj.create(cursor,
+            create_id = order_line_obj.create(cursor,
                                   user,
                                   {
                       'order_id':order.id,
@@ -878,6 +880,7 @@ class PromotionsRulesActions(orm.Model):
                                   },
                                   context
                                   )
+            return order.write({'order_line': [(4, create_id)]})
 
     def create_y_line(self, cursor, user, action,
                        order, quantity, product_id, context=None):
@@ -894,7 +897,7 @@ class PromotionsRulesActions(orm.Model):
         order_line_obj = self.pool.get('sale.order.line')
         product_obj = self.pool.get('product.product')
         product_y = product_obj.browse(cursor, user, product_id[0])
-        return order_line_obj.create(cursor, user, {
+        create_id = order_line_obj.create(cursor, user, {
                              'order_id':order.id,
                              'product_id':product_y.id,
                              'name':'[%s]%s (%s)' % (
@@ -905,6 +908,7 @@ class PromotionsRulesActions(orm.Model):
                               'product_uom_qty':quantity,
                               'product_uom':product_y.uom_id.id
                               }, context)
+        return order.write({'order_line': [(4, create_id)]})
 
     def action_prod_x_get_y(self, cursor, user,
                              action, order, context=None):
