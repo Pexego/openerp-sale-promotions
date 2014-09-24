@@ -33,6 +33,39 @@ class SaleOrder(orm.Model):
         'coupon_code':fields.char('Promo Coupon Code', size=20),
     }
 
+    def clear_existing_promotion_lines(self, cursor, user,
+                                        order_id, context=None):
+        """
+        Deletes existing promotion lines before applying
+        @param cursor: Database Cursor
+        @param user: ID of User
+        @param order: Sale order id
+        @param context: Context(no direct use).
+        """
+        order = self.browse(cursor, user, order_id, context)
+        order_line_obj = self.pool.get('sale.order.line')
+        #Delete all promotion lines
+        order_line_ids = order_line_obj.search(cursor, user,
+                                            [
+                                             ('order_id', '=', order.id),
+                                             ('promotion_line', '=', True),
+                                            ], context=context
+                                            )
+        if order_line_ids:
+            order_line_obj.unlink(cursor, user, order_line_ids, context)
+        #Clear discount column
+        order_line_ids = order_line_obj.search(cursor, user,
+                                            [
+                                             ('order_id', '=', order.id),
+                                            ], context=context
+                                            )
+        if order_line_ids:
+            order_line_obj.write(cursor, user,
+                                 order_line_ids,
+                                 {'discount':0.00},
+                                 context=context)
+        return True
+
     def apply_promotions(self, cursor, user, ids, context=None):
         """
         Applies the promotions to the given records
@@ -43,6 +76,7 @@ class SaleOrder(orm.Model):
         """
         promotions_obj = self.pool.get('promos.rules')
         for order_id in ids:
+            self.clear_existing_promotion_lines(cursor, user, order_id, context)
             promotions_obj.apply_promotions(cursor, user,
                                             order_id, context=None)
 
@@ -60,4 +94,5 @@ class SaleOrderLine(orm.Model):
                 "Promotion Line",
                 help="Indicates if the line was created by promotions"
                                         )
+        'orig_line_promotion_id': fields.many2one('sale.order.line', 'Original line'),
     }

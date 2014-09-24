@@ -740,7 +740,7 @@ class PromotionsRulesActions(orm.Model):
         'promotion':fields.many2one('promos.rules', 'Promotion'),
     }
 
-    def clear_existing_promotion_lines(self, cursor, user,
+    '''def clear_existing_promotion_lines(self, cursor, user,
                                         order, context=None):
         """
         Deletes existing promotion lines before applying
@@ -770,7 +770,7 @@ class PromotionsRulesActions(orm.Model):
                                  order_line_ids,
                                  {'discount':0.00},
                                  context=context)
-        return True
+        return True'''
 
     def action_prod_disc_perc(self, cursor, user,
                                action, order, context=None):
@@ -1014,7 +1014,7 @@ class PromotionsRulesActions(orm.Model):
         @param order: sale order
         @param context: Context(no direct use).
         """
-        self.clear_existing_promotion_lines(cursor, user, order, context)
+        # self.clear_existing_promotion_lines(cursor, user, order, context)
         action = self.browse(cursor, user, action_id, context)
         method_name = 'action_' + action.action_type
         return getattr(self, method_name).__call__(cursor, user, action,
