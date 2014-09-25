@@ -59,6 +59,9 @@ class SaleOrder(orm.Model):
                                              ('order_id', '=', order.id),
                                             ], context=context
                                             )
+        for line in order_line_obj.browse(cursor, user, order_line_ids, context):
+            if line.orig_qty:
+                order_line_obj.write(cursor, user, [line.id], {'product_uom_qty': line.orig_qty}, context)
         if order_line_ids:
             order_line_obj.write(cursor, user,
                                  order_line_ids,
@@ -93,6 +96,7 @@ class SaleOrderLine(orm.Model):
         'promotion_line':fields.boolean(
                 "Promotion Line",
                 help="Indicates if the line was created by promotions"
-                                        )
-        'orig_line_promotion_id': fields.many2one('sale.order.line', 'Original line'),
+                ),
+        'orig_qty': fields.float('Original qty')
+
     }

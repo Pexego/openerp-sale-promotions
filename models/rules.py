@@ -975,6 +975,7 @@ class PromotionsRulesActions(orm.Model):
                                          {
                                           'name':line_name,
                                           'product_uom_qty': tot_free_y,
+                                          'orig_qty': update_order_line.product_uom_qty,
                                           'discount': 100,
                                           }, context)
 
@@ -984,6 +985,7 @@ class PromotionsRulesActions(orm.Model):
                     order_line_obj.write(cursor, user, update_order_line.id,
                                          {
                                     'product_uom_qty': qty_y_in_cart - tot_free_y,
+                                    'orig_qty': update_order_line.product_uom_qty,
                                           }, context)
                     self.create_y_line(cursor, user, action,
                                             order,
