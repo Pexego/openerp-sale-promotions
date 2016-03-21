@@ -790,6 +790,7 @@ class PromotionsRulesActions(orm.Model):
                                      order_line.id,
                                      {
                                       'discount':eval(action.arguments),
+                                      'old_discount': order_line.discount,
                                       },
                                      context
                                      )

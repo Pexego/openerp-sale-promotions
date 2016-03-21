@@ -61,12 +61,14 @@ class SaleOrder(orm.Model):
                                             )
         for line in order_line_obj.browse(cursor, user, order_line_ids, context):
             if line.orig_qty:
-                order_line_obj.write(cursor, user, [line.id], {'product_uom_qty': line.orig_qty}, context)
-        if order_line_ids:
-            order_line_obj.write(cursor, user,
-                                 order_line_ids,
-                                 {'discount':0.00},
-                                 context=context)
+                order_line_obj.write(cursor, user, [line.id],
+                                     {'product_uom_qty': line.orig_qty},
+                                     context)
+            if line.old_discount:
+                order_line_obj.write(cursor, user, [line.id],
+                                     {'discount': line.old_discount,
+                                      'old_discount': 0.00}, context)
+
         return True
 
     def apply_promotions(self, cursor, user, ids, context=None):
@@ -97,6 +99,7 @@ class SaleOrderLine(orm.Model):
                 "Promotion Line",
                 help="Indicates if the line was created by promotions"
                 ),
-        'orig_qty': fields.float('Original qty')
-
+        'orig_qty': fields.float('Original qty'),
+        'old_discount': fields.float('Old discount', digits=(5,2),
+                                     readonly=True)
     }
